@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 
 // Global variables provided by the Canvas environment
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'trackbus-a328c'; // REPLACE 'default-badminton-app' with your Firebase Project ID
+// Using the provided Firebase projectId for appId fallback
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'trackbus-a328c'; // Updated with your actual Firebase Project ID
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+  // Your actual Firebase config from Firebase Console
   apiKey: "AIzaSyCi8YlQoXI9GYOPIYeAXdFNlZ9sp_0zRDk",
   authDomain: "trackbus-a328c.firebaseapp.com",
   projectId: "trackbus-a328c",
