@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 // Global variables provided by the Canvas environment
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'trackbus-a328c';
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-badminton-app'; // REPLACE 'default-badminton-app' with your Firebase Project ID
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
   apiKey: "AIzaSyCi8YlQoXI9GYOPIYeAXdFNlZ9sp_0zRDk",
   authDomain: "trackbus-a328c.firebaseapp.com",
@@ -45,7 +45,7 @@ const App = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [exitConfirm, setExitConfirm] = useState(false);
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false); // New state for exit confirmation modal
 
   const [partners, setPartners] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -59,7 +59,7 @@ const App = () => {
 
   // Static login credentials (client-side only for this example)
   const STATIC_USERNAME = 'admin';
-  const STATIC_PASSWORD = 'password123';
+  const STATIC_PASSWORD = 'password123'; // Corrected to 'password123'
 
   // --- Firebase Authentication and Data Fetching ---
   useEffect(() => {
@@ -161,18 +161,21 @@ const App = () => {
   const goToExpenses = () => setCurrentPage('expenses');
   const goToSales = () => setCurrentPage('sales');
 
-  const handleExit = () => {
-    if (exitConfirm) {
-      setCurrentPage('login');
-      setUsername('');
-      setPassword('');
-      setExitConfirm(false);
-      showNotification('success', 'Logged out successfully.');
-    } else {
-      setExitConfirm(true);
-      showNotification('info', 'Click "Exit" again to confirm logout.');
-      setTimeout(() => setExitConfirm(false), 3000); // Reset confirmation after 3 seconds
-    }
+  // New Exit Confirmation Logic
+  const handleExitClick = () => {
+    setShowExitConfirmModal(true);
+  };
+
+  const confirmExit = () => {
+    setCurrentPage('login');
+    setUsername('');
+    setPassword('');
+    setShowExitConfirmModal(false);
+    showNotification('success', 'Logged out successfully.');
+  };
+
+  const cancelExit = () => {
+    setShowExitConfirmModal(false);
   };
 
   // --- Calculations for Partner Details ---
@@ -302,10 +305,10 @@ const App = () => {
   const Modal = ({ type, message, onClose }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-black opacity-70"></div>
-      <div className={`relative p-6 rounded-xl shadow-lg max-w-sm w-full text-center transform scale-105 animate-pop-in
-        ${type === 'success' ? 'bg-green-600 text-white' :
-          type === 'error' ? 'bg-red-600 text-white' :
-          'bg-blue-600 text-white'}`}>
+      <div className={`relative p-6 rounded-2xl shadow-soft-xl max-w-sm w-full text-center
+        ${type === 'success' ? 'bg-app-green text-app-text-primary' :
+          type === 'error' ? 'bg-app-red text-app-text-primary' :
+          'bg-app-blue text-app-text-primary'}`}>
         <div className="flex justify-center mb-3">
           {type === 'success' && <CheckCircle size={32} />}
           {type === 'error' && <XCircle size={32} />}
@@ -316,12 +319,37 @@ const App = () => {
     </div>
   );
 
+  const ExitConfirmModal = ({ onConfirm, onCancel }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="absolute inset-0 bg-black opacity-70"></div>
+      <div className="relative bg-app-card p-8 rounded-2xl shadow-soft-xl w-full max-w-sm text-center border border-app-border">
+        <h3 className="text-xl font-semibold mb-6 text-app-text-primary">Confirm Logout</h3>
+        <p className="text-app-text-secondary mb-8">Are you sure you want to exit and return to the login page?</p>
+        <div className="flex flex-col space-y-4">
+          <button
+            onClick={onConfirm}
+            className="bg-app-blue hover:bg-app-blue-dark text-app-text-primary font-bold py-3 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-soft-lg transform hover:scale-105 border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue"
+          >
+            Confirm Exit
+          </button>
+          <button
+            onClick={onCancel}
+            className="bg-app-button-bg hover:bg-app-button-hover text-app-text-primary font-bold py-3 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-soft-lg transform hover:scale-105 border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+
   const renderPage = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 text-white font-inter">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-          <p className="mt-4 text-lg text-blue-400">Loading application...</p>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-app-bg text-app-text-primary font-inter">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-app-blue"></div>
+          <p className="mt-4 text-lg text-app-text-secondary">Loading application...</p>
         </div>
       );
     }
@@ -329,94 +357,99 @@ const App = () => {
     switch (currentPage) {
       case 'login':
         return (
-          <div className="relative flex flex-col items-center justify-center min-h-screen bg-gray-950 text-white font-inter p-4 overflow-hidden">
+          <div className="relative flex flex-col items-center justify-center min-h-screen bg-app-bg text-app-text-primary font-inter p-4 overflow-hidden">
             {/* Background Image/Overlay */}
-            <div className="absolute inset-0 z-0 bg-cover bg-center opacity-20"
-              style={{ backgroundImage: "url('https://placehold.co/1920x1080/0A0A0A/B0B0B0?text=Badminton+Court')" }}>
+            <div className="absolute inset-0 z-0 bg-cover bg-center opacity-10"
+              style={{ backgroundImage: "url('https://placehold.co/1920x1080/1C1C1E/AEAEB2?text=Badminton+Racket+Subtle')" }}>
             </div>
-            <div className="absolute inset-0 z-0 bg-gradient-to-br from-gray-950 via-black to-gray-900 opacity-80"></div>
+            <div className="absolute inset-0 z-0 bg-gradient-to-br from-app-bg via-black to-app-bg opacity-80"></div>
 
-            <h1 className="relative z-10 text-5xl md:text-6xl font-extrabold mb-8 text-blue-500 drop-shadow-lg animate-fade-in-down">
+            <h1 className="relative z-10 text-5xl md:text-6xl font-extrabold mb-8 text-app-text-primary drop-shadow-lg animate-fade-in-down">
               Test Business Name
             </h1>
-            <div className="relative z-10 bg-gray-800 bg-opacity-90 p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-700 backdrop-blur-sm animate-fade-in-up">
-              <h2 className="text-3xl font-semibold mb-6 text-center text-blue-300">Login</h2>
+            <div className="relative z-10 bg-app-card bg-opacity-90 p-8 rounded-2xl shadow-soft-xl w-full max-w-md border border-app-border backdrop-blur-sm animate-fade-in-up">
+              <h2 className="text-3xl font-semibold mb-6 text-center text-app-text-primary">Login</h2>
               <div className="mb-4">
-                <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="username">
+                <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="username">
                   Login ID
                 </label>
                 <input
                   type="text"
                   id="username"
-                  className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                  className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="admin"
                 />
               </div>
               <div className="mb-6">
-                <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="password">
+                <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="password">
                   Password
                 </label>
                 <input
                   type="password"
                   id="password"
-                  className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                  className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="password123"
                 />
               </div>
-              {loginError && <p className="text-red-500 text-sm italic mb-4 text-center">{loginError}</p>}
+              {loginError && <p className="text-app-red text-sm italic mb-4 text-center">{loginError}</p>}
               <button
-                className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 px-6 rounded-lg w-full transition-all duration-300 ease-in-out shadow-lg transform hover:scale-105"
+                className="bg-app-blue hover:bg-app-blue-dark text-app-text-primary font-bold py-3 px-6 rounded-lg w-full transition-all duration-300 ease-in-out shadow-soft-lg transform hover:scale-105 border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue"
                 onClick={handleLogin}
               >
                 Login
               </button>
             </div>
             {isAuthReady && userId && (
-              <p className="relative z-10 text-gray-500 text-sm mt-4">User ID: {userId}</p>
+              <p className="relative z-10 text-app-text-secondary text-sm mt-4">User ID: {userId}</p>
             )}
             {!isAuthReady && (
-              <p className="relative z-10 text-blue-400 text-sm mt-4">Connecting to database...</p>
+              <p className="relative z-10 text-app-blue text-sm mt-4">Connecting to database...</p>
             )}
           </div>
         );
 
       case 'functions':
         return (
-          <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 text-white font-inter p-4">
-            <h1 className="text-4xl md:text-5xl font-bold mb-12 text-blue-500 text-center animate-fade-in-down">Functions</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+          <div className="relative flex flex-col items-center justify-center min-h-screen bg-app-bg text-app-text-primary font-inter p-4 md:p-8 overflow-hidden">
+            {/* Background Image/Overlay */}
+            <div className="absolute inset-0 z-0 bg-cover bg-center opacity-10"
+              style={{ backgroundImage: "url('https://placehold.co/1920x1080/1C1C1E/AEAEB2?text=Shuttlecock+Pattern+Subtle')" }}>
+            </div>
+            <div className="absolute inset-0 z-0 bg-gradient-to-br from-app-bg via-black to-app-bg opacity-80"></div>
+
+            <h1 className="relative z-10 text-4xl md:text-5xl font-bold mb-12 text-app-text-primary text-center animate-fade-in-down">Functions</h1>
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
               <button
-                className="flex flex-col items-center justify-center bg-gray-800 hover:bg-gray-700 p-8 rounded-xl shadow-xl transition-all duration-300 ease-in-out border border-gray-700 text-blue-400 hover:text-blue-300 transform hover:scale-105 group"
+                className="flex flex-col items-center justify-center bg-app-button-bg hover:bg-app-button-hover p-8 rounded-2xl shadow-soft-lg transition-all duration-300 ease-in-out border border-app-border text-app-text-primary transform hover:scale-105 group focus:outline-none focus:ring-2 focus:ring-app-blue"
                 onClick={goToPartners}
               >
-                <Users size={48} className="mb-3 text-blue-500 group-hover:text-blue-400 transition-colors duration-300" />
+                <Users size={48} className="mb-3 text-app-blue group-hover:text-app-blue-dark transition-colors duration-300" />
                 <span className="text-xl font-semibold">Partner Details</span>
               </button>
               <button
-                className="flex flex-col items-center justify-center bg-gray-800 hover:bg-gray-700 p-8 rounded-xl shadow-xl transition-all duration-300 ease-in-out border border-gray-700 text-blue-400 hover:text-blue-300 transform hover:scale-105 group"
+                className="flex flex-col items-center justify-center bg-app-button-bg hover:bg-app-button-hover p-8 rounded-2xl shadow-soft-lg transition-all duration-300 ease-in-out border border-app-border text-app-text-primary transform hover:scale-105 group focus:outline-none focus:ring-2 focus:ring-app-blue"
                 onClick={goToExpenses}
               >
-                <Minus size={48} className="mb-3 text-red-500 group-hover:text-red-400 transition-colors duration-300" />
+                <Minus size={48} className="mb-3 text-app-red group-hover:text-app-red transition-colors duration-300" />
                 <span className="text-xl font-semibold">Expense Tab</span>
               </button>
               <button
-                className="flex flex-col items-center justify-center bg-gray-800 hover:bg-gray-700 p-8 rounded-xl shadow-xl transition-all duration-300 ease-in-out border border-gray-700 text-blue-400 hover:text-blue-300 transform hover:scale-105 group"
+                className="flex flex-col items-center justify-center bg-app-button-bg hover:bg-app-button-hover p-8 rounded-2xl shadow-soft-lg transition-all duration-300 ease-in-out border border-app-border text-app-text-primary transform hover:scale-105 group focus:outline-none focus:ring-2 focus:ring-app-blue"
                 onClick={goToSales}
               >
-                <Plus size={48} className="mb-3 text-green-500 group-hover:text-green-400 transition-colors duration-300" />
+                <Plus size={48} className="mb-3 text-app-green group-hover:text-app-green transition-colors duration-300" />
                 <span className="text-xl font-semibold">Sales Tab</span>
               </button>
               <button
-                className={`flex flex-col items-center justify-center p-8 rounded-xl shadow-xl transition-all duration-300 ease-in-out border border-gray-700 transform hover:scale-105 group
-                  ${exitConfirm ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-800 hover:bg-gray-700 text-red-400 hover:text-red-300'}`}
-                onClick={handleExit}
+                className="flex flex-col items-center justify-center bg-app-button-bg hover:bg-app-button-hover p-8 rounded-2xl shadow-soft-lg transition-all duration-300 ease-in-out border border-app-border text-app-text-primary transform hover:scale-105 group focus:outline-none focus:ring-2 focus:ring-app-blue"
+                onClick={handleExitClick} // Changed to open the modal
               >
-                <LogOut size={48} className={`mb-3 ${exitConfirm ? 'text-white' : 'text-red-500 group-hover:text-red-400'} transition-colors duration-300`} />
-                <span className="text-xl font-semibold">{exitConfirm ? 'Click to Confirm Exit' : 'Exit'}</span>
+                <LogOut size={48} className="mb-3 text-app-text-secondary group-hover:text-app-text-primary transition-colors duration-300" />
+                <span className="text-xl font-semibold">Exit</span>
               </button>
             </div>
           </div>
@@ -424,62 +457,68 @@ const App = () => {
 
       case 'partners':
         return (
-          <div className="min-h-screen bg-gray-950 text-white font-inter p-4">
-            <div className="flex items-center mb-6">
-              <button onClick={goToFunctions} className="text-blue-400 hover:text-blue-300 mr-4 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors duration-200">
+          <div className="relative min-h-screen bg-app-bg text-app-text-primary font-inter p-4 md:p-8 overflow-hidden">
+             {/* Background Image/Overlay */}
+             <div className="absolute inset-0 z-0 bg-cover bg-center opacity-10"
+              style={{ backgroundImage: "url('https://placehold.co/1920x1080/1C1C1E/AEAEB2?text=Team+Huddle+Subtle')" }}>
+            </div>
+            <div className="absolute inset-0 z-0 bg-gradient-to-br from-app-bg via-black to-app-bg opacity-80"></div>
+
+            <div className="relative z-10 flex items-center mb-6">
+              <button onClick={goToFunctions} className="text-app-blue hover:text-app-blue-dark mr-4 p-2 rounded-lg bg-app-card hover:bg-app-border transition-colors duration-200 shadow-soft-lg border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue">
                 <LogOut size={24} />
               </button>
-              <h2 className="text-3xl md:text-4xl font-bold text-blue-500">Partner Details</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-app-text-primary">Partner Details</h2>
             </div>
-            <div className="overflow-x-auto bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-4">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-700">
+            <div className="relative z-10 overflow-x-auto bg-app-card rounded-2xl shadow-soft-lg border border-app-border p-4">
+              <table className="min-w-full divide-y divide-app-border">
+                <thead className="bg-app-border">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tl-lg">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider rounded-tl-xl">
                       Name of the Partner
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Money Invested
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Date of Investment
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       % of Overall Investment
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Profit/Loss (AUD)
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tr-lg">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider rounded-tr-xl">
                       % Profit/Loss
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800">
+                <tbody className="divide-y divide-app-border">
                   {partnerMetrics.length > 0 ? (
                     partnerMetrics.map((partner, index) => (
-                      <tr key={partner.id} className={`hover:bg-gray-700 transition-colors duration-200 ${index % 2 === 0 ? 'bg-gray-850' : 'bg-gray-800'}`}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-100">{partner.name}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">AUD {partner.moneyInvested?.toFixed(2)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{partner.investmentDate}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{partner.percentOfOverallInvestment}%</td>
-                        <td className={`px-4 py-3 whitespace-nowrap text-sm ${parseFloat(partner.profitLoss) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <tr key={partner.id} className={`hover:bg-app-border transition-colors duration-200 ${index % 2 === 0 ? 'bg-app-card' : 'bg-app-bg'}`}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-app-text-primary">{partner.name}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">AUD {partner.moneyInvested?.toFixed(2)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{partner.investmentDate}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{partner.percentOfOverallInvestment}%</td>
+                        <td className={`px-4 py-3 whitespace-nowrap text-sm ${parseFloat(partner.profitLoss) >= 0 ? 'text-app-green' : 'text-app-red'}`}>
                           AUD {partner.profitLoss}
                         </td>
-                        <td className={`px-4 py-3 whitespace-nowrap text-sm ${parseFloat(partner.percentOfProfitLoss) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <td className={`px-4 py-3 whitespace-nowrap text-sm ${parseFloat(partner.percentOfProfitLoss) >= 0 ? 'text-app-green' : 'text-app-red'}`}>
                           {partner.percentOfProfitLoss}%
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-gray-400">No partner data available. Add data in Firestore.</td>
+                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-app-text-secondary">No partner data available. Add data in Firebase Firestore.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            <p className="text-gray-400 text-sm mt-6 max-w-3xl mx-auto">
+            <p className="relative z-10 text-app-text-secondary text-sm mt-6 max-w-3xl mx-auto">
               **Note:** Profit/Loss is calculated based on the overall business performance (Total Sales - Total Expenses) and allocated proportionally to each partner's investment percentage.
             </p>
           </div>
@@ -487,31 +526,37 @@ const App = () => {
 
       case 'expenses':
         return (
-          <div className="min-h-screen bg-gray-950 text-white font-inter p-4">
-            <div className="flex items-center mb-6">
-              <button onClick={goToFunctions} className="text-blue-400 hover:text-blue-300 mr-4 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors duration-200">
+          <div className="relative min-h-screen bg-app-bg text-app-text-primary font-inter p-4 md:p-8 overflow-hidden">
+             {/* Background Image/Overlay */}
+             <div className="absolute inset-0 z-0 bg-cover bg-center opacity-10"
+              style={{ backgroundImage: "url('https://placehold.co/1920x1080/1C1C1E/AEAEB2?text=Financial+Tracking+Subtle')" }}>
+            </div>
+            <div className="absolute inset-0 z-0 bg-gradient-to-br from-app-bg via-black to-app-bg opacity-80"></div>
+
+            <div className="relative z-10 flex items-center mb-6">
+              <button onClick={goToFunctions} className="text-app-blue hover:text-app-blue-dark mr-4 p-2 rounded-lg bg-app-card hover:bg-app-border transition-colors duration-200 shadow-soft-lg border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue">
                 <LogOut size={24} />
               </button>
-              <h2 className="text-3xl md:text-4xl font-bold text-blue-500">Expense Tab</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-app-text-primary">Expense Tab</h2>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-3xl mx-auto mb-8 border border-gray-700">
-              <h3 className="text-xl font-semibold mb-4 text-center text-blue-300">Add New Expense</h3>
+            <div className="relative z-10 bg-app-card p-6 rounded-2xl shadow-soft-lg w-full max-w-3xl mx-auto mb-8 border border-app-border">
+              <h3 className="text-xl font-semibold mb-4 text-center text-app-text-primary">Add New Expense</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2">Type of Entry</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2">Type of Entry</label>
                   <input
                     type="text"
                     value="Expense"
                     disabled
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight bg-gray-900 cursor-not-allowed"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight bg-app-bg cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-app-blue"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="expenseType">Type of Expense</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="expenseType">Type of Expense</label>
                   <select
                     id="expenseType"
-                    className="shadow-inner border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={expenseType}
                     onChange={(e) => setExpenseType(e.target.value)}
                   >
@@ -521,11 +566,11 @@ const App = () => {
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="expenseDescription">Description (max 30 chars)</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="expenseDescription">Description (max 30 chars)</label>
                   <input
                     type="text"
                     id="expenseDescription"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={expenseDescription}
                     onChange={(e) => setExpenseDescription(e.target.value.slice(0, 30))}
                     maxLength={30}
@@ -533,21 +578,21 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="expenseDate">Date of Expense</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="expenseDate">Date of Expense</label>
                   <input
                     type="date"
                     id="expenseDate"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={expenseDate}
                     onChange={(e) => setExpenseDate(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="expensePerUnitCost">Per Unit Cost (AUD)</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="expensePerUnitCost">Per Unit Cost (AUD)</label>
                   <input
                     type="number"
                     id="expensePerUnitCost"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={expensePerUnitCost}
                     onChange={(e) => setExpensePerUnitCost(e.target.value)}
                     placeholder="e.g., 10.00"
@@ -555,11 +600,11 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="expenseQuantity">Quantity</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="expenseQuantity">Quantity</label>
                   <input
                     type="number"
                     id="expenseQuantity"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={expenseQuantity}
                     onChange={(e) => setExpenseQuantity(e.target.value)}
                     placeholder="e.g., 2"
@@ -567,63 +612,63 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2">Total Cost (AUD)</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2">Total Cost (AUD)</label>
                   <input
                     type="text"
                     value={expenseTotalCost.toFixed(2)}
                     disabled
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight bg-gray-900 cursor-not-allowed"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight bg-app-bg cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-app-blue"
                   />
                 </div>
               </div>
               <button
-                className="bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white font-bold py-3 px-6 rounded-lg w-full mt-6 transition-all duration-300 ease-in-out shadow-md transform hover:scale-105"
+                className="bg-app-red hover:bg-app-red text-app-text-primary font-bold py-3 px-6 rounded-lg w-full mt-6 transition-all duration-300 ease-in-out shadow-soft-lg transform hover:scale-105 border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue"
                 onClick={handleAddExpense}
               >
                 Add Expense
               </button>
             </div>
 
-            <h3 className="text-xl font-semibold mb-4 text-center text-blue-300">Recent Expenses</h3>
-            <div className="overflow-x-auto bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-4">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-700">
+            <h3 className="text-xl font-semibold mb-4 text-center text-app-text-primary">Recent Expenses</h3>
+            <div className="relative z-10 overflow-x-auto bg-app-card rounded-2xl shadow-soft-lg border border-app-border p-4">
+              <table className="min-w-full divide-y divide-app-border">
+                <thead className="bg-app-border">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tl-lg">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider rounded-tl-xl">
                       Type of Expense
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Description
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Date
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Per Unit Cost (AUD)
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Quantity
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tr-lg">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider rounded-tr-xl">
                       Total Cost (AUD)
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800">
+                <tbody className="divide-y divide-app-border">
                   {expenses.length > 0 ? (
                     expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).map((expense, index) => (
-                      <tr key={expense.id} className={`hover:bg-gray-700 transition-colors duration-200 ${index % 2 === 0 ? 'bg-gray-850' : 'bg-gray-800'}`}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-100">{expense.typeOfExpense}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{expense.description}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{expense.date}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{expense.perUnitCost?.toFixed(2)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{expense.quantity}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{expense.totalCost?.toFixed(2)}</td>
+                      <tr key={expense.id} className={`hover:bg-app-border transition-colors duration-200 ${index % 2 === 0 ? 'bg-app-card' : 'bg-app-bg'}`}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-app-text-primary">{expense.typeOfExpense}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{expense.description}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{expense.date}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{expense.perUnitCost?.toFixed(2)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{expense.quantity}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{expense.totalCost?.toFixed(2)}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-gray-400">No expenses recorded.</td>
+                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-app-text-secondary">No expenses recorded.</td>
                     </tr>
                   )}
                 </tbody>
@@ -634,31 +679,37 @@ const App = () => {
 
       case 'sales':
         return (
-          <div className="min-h-screen bg-gray-950 text-white font-inter p-4">
-            <div className="flex items-center mb-6">
-              <button onClick={goToFunctions} className="text-blue-400 hover:text-blue-300 mr-4 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors duration-200">
+          <div className="relative min-h-screen bg-app-bg text-app-text-primary font-inter p-4 md:p-8 overflow-hidden">
+             {/* Background Image/Overlay */}
+             <div className="absolute inset-0 z-0 bg-cover bg-center opacity-10"
+              style={{ backgroundImage: "url('https://placehold.co/1920x1080/1C1C1E/AEAEB2?text=Sales+Growth+Subtle')" }}>
+            </div>
+            <div className="absolute inset-0 z-0 bg-gradient-to-br from-app-bg via-black to-app-bg opacity-80"></div>
+
+            <div className="relative z-10 flex items-center mb-6">
+              <button onClick={goToFunctions} className="text-app-blue hover:text-app-blue-dark mr-4 p-2 rounded-lg bg-app-card hover:bg-app-border transition-colors duration-200 shadow-soft-lg border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue">
                 <LogOut size={24} />
               </button>
-              <h2 className="text-3xl md:text-4xl font-bold text-blue-500">Sales Tab</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-app-text-primary">Sales Tab</h2>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-3xl mx-auto mb-8 border border-gray-700">
-              <h3 className="text-xl font-semibold mb-4 text-center text-blue-300">Add New Sale</h3>
+            <div className="relative z-10 bg-app-card p-6 rounded-2xl shadow-soft-lg w-full max-w-3xl mx-auto mb-8 border border-app-border">
+              <h3 className="text-xl font-semibold mb-4 text-center text-app-text-primary">Add New Sale</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2">Type of Entry</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2">Type of Entry</label>
                   <input
                     type="text"
                     value="Sale"
                     disabled
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight bg-gray-900 cursor-not-allowed"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight bg-app-bg cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-app-blue"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="saleType">Type of Sale</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="saleType">Type of Sale</label>
                   <select
                     id="saleType"
-                    className="shadow-inner border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={saleType}
                     onChange={(e) => setSaleType(e.target.value)}
                   >
@@ -668,11 +719,11 @@ const App = () => {
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="saleDescription">Description (max 30 chars)</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="saleDescription">Description (max 30 chars)</label>
                   <input
                     type="text"
                     id="saleDescription"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={saleDescription}
                     onChange={(e) => setSaleDescription(e.target.value.slice(0, 30))}
                     maxLength={30}
@@ -680,21 +731,21 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="saleDate">Date of Sale</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="saleDate">Date of Sale</label>
                   <input
                     type="date"
                     id="saleDate"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={saleDate}
                     onChange={(e) => setSaleDate(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="salePerUnitSalePrice">Per Unit Sale Price (AUD)</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="salePerUnitSalePrice">Per Unit Sale Price (AUD)</label>
                   <input
                     type="number"
                     id="salePerUnitSalePrice"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={salePerUnitSalePrice}
                     onChange={(e) => setSalePerUnitSalePrice(e.target.value)}
                     placeholder="e.g., 15.00"
@@ -702,11 +753,11 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2" htmlFor="saleQuantity">Quantity</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="saleQuantity">Quantity</label>
                   <input
                     type="number"
                     id="saleQuantity"
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 transition-all duration-200"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
                     value={saleQuantity}
                     onChange={(e) => setSaleQuantity(e.target.value)}
                     placeholder="e.g., 1"
@@ -714,63 +765,63 @@ const App = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm font-bold mb-2">Total Sale Price (AUD)</label>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2">Total Sale Price (AUD)</label>
                   <input
                     type="text"
                     value={saleTotalSalePrice.toFixed(2)}
                     disabled
-                    className="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 text-gray-200 leading-tight bg-gray-900 cursor-not-allowed"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight bg-app-bg cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-app-blue"
                   />
                 </div>
               </div>
               <button
-                className="bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white font-bold py-3 px-6 rounded-lg w-full mt-6 transition-all duration-300 ease-in-out shadow-md transform hover:scale-105"
+                className="bg-app-green hover:bg-app-green text-app-text-primary font-bold py-3 px-6 rounded-lg w-full mt-6 transition-all duration-300 ease-in-out shadow-soft-lg transform hover:scale-105 border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue"
                 onClick={handleAddSale}
               >
                 Add Sale
               </button>
             </div>
 
-            <h3 className="text-xl font-semibold mb-4 text-center text-blue-300">Recent Sales</h3>
-            <div className="overflow-x-auto bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-4">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-700">
+            <h3 className="text-xl font-semibold mb-4 text-center text-app-text-primary">Recent Sales</h3>
+            <div className="relative z-10 overflow-x-auto bg-app-card rounded-2xl shadow-soft-lg border border-app-border p-4">
+              <table className="min-w-full divide-y divide-app-border">
+                <thead className="bg-app-border">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tl-lg">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider rounded-tl-xl">
                       Type of Sale
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Description
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Date
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Per Unit Sale Price (AUD)
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider">
                       Quantity
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider rounded-tr-lg">
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-app-text-secondary uppercase tracking-wider rounded-tr-xl">
                       Total Sale Price (AUD)
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800">
+                <tbody className="divide-y divide-app-border">
                   {sales.length > 0 ? (
                     sales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale, index) => (
-                      <tr key={sale.id} className={`hover:bg-gray-700 transition-colors duration-200 ${index % 2 === 0 ? 'bg-gray-850' : 'bg-gray-800'}`}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-100">{sale.typeOfSale}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{sale.description}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{sale.date}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{sale.perUnitSalePrice?.toFixed(2)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{sale.quantity}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{sale.totalSalePrice?.toFixed(2)}</td>
+                      <tr key={sale.id} className={`hover:bg-app-border transition-colors duration-200 ${index % 2 === 0 ? 'bg-app-card' : 'bg-app-bg'}`}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-app-text-primary">{sale.typeOfSale}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{sale.description}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{sale.date}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{sale.perUnitSalePrice?.toFixed(2)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{sale.quantity}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">{sale.totalSalePrice?.toFixed(2)}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-gray-400">No sales recorded.</td>
+                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-app-text-secondary">No sales recorded.</td>
                     </tr>
                   )}
                 </tbody>
@@ -785,13 +836,19 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white font-inter">
+    <div className="min-h-screen bg-app-bg text-app-text-primary font-inter">
       {renderPage()}
       {showModal && (
         <Modal
           type={modalContent.type}
           message={modalContent.message}
           onClose={() => setShowModal(false)}
+        />
+      )}
+      {showExitConfirmModal && (
+        <ExitConfirmModal
+          onConfirm={confirmExit}
+          onCancel={cancelExit}
         />
       )}
     </div>
