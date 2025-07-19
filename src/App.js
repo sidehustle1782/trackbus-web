@@ -5,9 +5,11 @@ import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, getD
 import {
   LogIn, Users, TrendingUp, DollarSign, LogOut, Plus, Minus, CalendarDays, ClipboardList, Package, Scale, Percent, Wallet, Info, CheckCircle, XCircle, BarChart, ShoppingCart
 } from 'lucide-react';
+// Recharts imports for charting
+import { PieChart, Pie, Cell, Tooltip, Legend, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+
 
 // Global variables provided by the Canvas environment
-// Using the provided Firebase projectId for appId fallback
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'trackbus-a328c'; // Updated with your actual Firebase Project ID
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
   // Your actual Firebase config from Firebase Console
@@ -58,6 +60,13 @@ const App = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState({ type: '', message: '' });
   const [isLoading, setIsLoading] = useState(true); // Added loading state
+
+  // State for adding new partner
+  const [newPartnerName, setNewPartnerName] = useState('');
+  const [newMoneyInvested, setNewMoneyInvested] = useState('');
+  const [newInvestmentDate, setNewInvestmentDate] = useState('');
+  const [newPartnerDescription, setNewPartnerDescription] = useState(''); // New state for partner description
+
 
   // Static login credentials (client-side only for this example)
   const STATIC_USERNAME = 'admin';
@@ -187,24 +196,84 @@ const App = () => {
     const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.totalCost || 0), 0);
     const overallBusinessProfitLoss = totalSales - totalExpenses;
 
-    return partners.map(partner => {
-      const invested = partner.moneyInvested || 0;
-      const percentOfOverallInvestment = totalInvestment > 0 ? (invested / totalInvestment) * 100 : 0;
+    return {
+      partnersWithMetrics: partners.map(partner => {
+        const invested = partner.moneyInvested || 0;
+        const percentOfOverallInvestment = totalInvestment > 0 ? (invested / totalInvestment) * 100 : 0;
 
-      // Allocate overall profit/loss proportionally to investment
-      const partnerProfitLoss = overallBusinessProfitLoss * (percentOfOverallInvestment / 100);
-      const percentOfProfitLoss = invested > 0 ? (partnerProfitLoss / invested) * 100 : 0;
+        // Allocate overall profit/loss proportionally to investment
+        const partnerProfitLoss = overallBusinessProfitLoss * (percentOfOverallInvestment / 100);
+        const percentOfProfitLoss = invested > 0 ? (partnerProfitLoss / invested) * 100 : 0;
 
-      return {
-        ...partner,
-        percentOfOverallInvestment: percentOfOverallInvestment.toFixed(2),
-        profitLoss: partnerProfitLoss.toFixed(2),
-        percentOfProfitLoss: percentOfProfitLoss.toFixed(2)
-      };
-    });
+        return {
+          ...partner,
+          percentOfOverallInvestment: percentOfOverallInvestment.toFixed(2),
+          profitLoss: partnerProfitLoss.toFixed(2),
+          percentOfProfitLoss: percentOfProfitLoss.toFixed(2)
+        };
+      }),
+      totalInvestment: totalInvestment,
+      overallBusinessProfitLoss: overallBusinessProfitLoss
+    };
   }, [partners, sales, expenses]);
 
-  const partnerMetrics = calculatePartnerMetrics();
+  const { partnersWithMetrics, totalInvestment, overallBusinessProfitLoss } = calculatePartnerMetrics();
+
+  // Data for Pie Chart
+  const pieChartData = partnersWithMetrics.map(p => ({
+    name: p.name,
+    value: p.moneyInvested || 0,
+    percentage: parseFloat(p.percentOfOverallInvestment)
+  }));
+
+  // Data for Bar Chart (Net Overall Return)
+  const barChartData = [
+    {
+      name: 'Net Overall Return (AUD)',
+      'Profit/Loss': parseFloat(overallBusinessProfitLoss.toFixed(2))
+    }
+  ];
+
+  // Colors for the pie chart slices
+  const PIE_COLORS = ['#0A84FF', '#30D158', '#FF453A', '#FFD60A', '#5E5CE6', '#BF5AF2', '#64D2FF', '#FF9F0A'];
+
+
+  // --- Add Partner Logic ---
+  const handleAddPartner = async () => {
+    if (!newPartnerName || !newMoneyInvested || !newInvestmentDate || !newPartnerDescription) {
+      showNotification('error', 'Please fill all partner investment fields.');
+      return;
+    }
+    if (isNaN(parseFloat(newMoneyInvested)) || parseFloat(newMoneyInvested) <= 0) {
+      showNotification('error', 'Money Invested must be a positive number.');
+      return;
+    }
+    if (!db || !userId) {
+      showNotification('error', 'Database not ready. Please try again.');
+      return;
+    }
+
+    try {
+      const partnersCollectionRef = collection(db, `artifacts/${appId}/public/data/partners`);
+      await addDoc(partnersCollectionRef, {
+        name: newPartnerName,
+        moneyInvested: parseFloat(newMoneyInvested),
+        investmentDate: newInvestmentDate,
+        description: newPartnerDescription, // New description field
+        timestamp: new Date().toISOString() // Record when it was added
+      });
+      showNotification('success', 'Partner investment added successfully!');
+      // Clear form
+      setNewPartnerName('');
+      setNewMoneyInvested('');
+      setNewInvestmentDate('');
+      setNewPartnerDescription(''); // Clear new description field
+    } catch (e) {
+      console.error("Error adding partner investment: ", e);
+      showNotification('error', 'Failed to add partner investment.');
+    }
+  };
+
 
   // --- Expense Tab Logic ---
   const [expenseType, setExpenseType] = useState('court booking cost');
@@ -472,6 +541,132 @@ const App = () => {
               </button>
               <h2 className="text-3xl md:text-4xl font-bold text-app-text-primary">Partner Details</h2>
             </div>
+
+            {/* Charts Section */}
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-5xl mx-auto mb-8">
+                {/* Pie Chart: Investment Breakdown */}
+                <div className="bg-app-card p-6 rounded-2xl shadow-soft-lg border border-app-border flex flex-col items-center justify-center">
+                    <h3 className="text-xl font-semibold mb-4 text-center text-app-blue">Investment Breakdown by Partner</h3>
+                    {pieChartData.length > 0 && totalInvestment > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={pieChartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={100}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    label={({ name, percentage }) => `${name} (${percentage}%)`}
+                                >
+                                    {
+                                        pieChartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                        ))
+                                    }
+                                </Pie>
+                                <Tooltip formatter={(value, name, props) => [`AUD ${value.toFixed(2)}`, props.payload.name]} />
+                                <Legend wrapperStyle={{ color: 'white' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <p className="text-app-text-secondary text-center">No investment data to display. Add partners below!</p>
+                    )}
+                </div>
+
+                {/* Bar Chart: Net Overall Return */}
+                <div className="bg-app-card p-6 rounded-2xl shadow-soft-lg border border-app-border flex flex-col items-center justify-center">
+                    <h3 className="text-xl font-semibold mb-4 text-center text-app-blue">Net Overall Return</h3>
+                    {barChartData[0] && barChartData[0]['Profit/Loss'] !== undefined ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <RechartsBarChart
+                                data={barChartData}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" stroke="#48484A" />
+                                <XAxis dataKey="name" stroke="#AEAEB2" />
+                                <YAxis stroke="#AEAEB2" />
+                                <Tooltip formatter={(value) => `AUD ${value.toFixed(2)}`} />
+                                <Bar
+                                    dataKey="Profit/Loss"
+                                    fill={overallBusinessProfitLoss >= 0 ? '#30D158' : '#FF453A'} // Green for profit, red for loss
+                                />
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <p className="text-app-text-secondary text-center">No financial data to calculate overall return. Add sales and expenses!</p>
+                    )}
+                </div>
+            </div>
+
+            {/* Add New Partner Form */}
+            <div className="relative z-10 bg-app-card p-6 rounded-2xl shadow-soft-lg w-full max-w-3xl mx-auto mb-8 mt-8 border border-app-border"> {/* Added mt-8 for spacing */}
+              <h3 className="text-xl font-semibold mb-4 text-center text-app-green">Add New Partner Investment</h3> {/* Changed heading color */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Adjusted grid for description field */}
+                <div>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="newPartnerName">
+                    Partner Name
+                  </label>
+                  <input
+                    type="text"
+                    id="newPartnerName"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
+                    value={newPartnerName}
+                    onChange={(e) => setNewPartnerName(e.target.value)}
+                    placeholder="e.g., John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="newMoneyInvested">
+                    Money Invested (AUD)
+                  </label>
+                  <input
+                    type="number"
+                    id="newMoneyInvested"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
+                    value={newMoneyInvested}
+                    onChange={(e) => setNewMoneyInvested(e.target.value)}
+                    placeholder="e.g., 5000.00"
+                    step="0.01"
+                  />
+                </div>
+                <div className="md:col-span-2"> {/* Make description span full width on mobile, 2 columns on desktop */}
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="newPartnerDescription">
+                    Description (max 40 chars)
+                  </label>
+                  <input
+                    type="text"
+                    id="newPartnerDescription"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
+                    value={newPartnerDescription}
+                    onChange={(e) => setNewPartnerDescription(e.target.value.slice(0, 40))}
+                    maxLength={40}
+                    placeholder="e.g., Initial capital for shuttlecocks"
+                  />
+                </div>
+                <div>
+                  <label className="block text-app-text-secondary text-sm font-bold mb-2" htmlFor="newInvestmentDate">
+                    Date of Investment
+                  </label>
+                  <input
+                    type="date"
+                    id="newInvestmentDate"
+                    className="shadow-inner appearance-none border border-app-border rounded-lg w-full py-3 px-4 text-app-text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-app-blue bg-app-bg transition-all duration-200"
+                    value={newInvestmentDate}
+                    onChange={(e) => setNewInvestmentDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button
+                className="bg-app-blue hover:bg-app-blue-dark text-app-text-primary font-bold py-3 px-6 rounded-lg w-full mt-6 transition-all duration-300 ease-in-out shadow-soft-lg transform hover:scale-105 border border-app-border focus:outline-none focus:ring-2 focus:ring-app-blue"
+                onClick={handleAddPartner}
+              >
+                Add Partner Investment
+              </button>
+            </div>
+
+            <h3 className="text-xl font-semibold mb-4 text-center text-app-red mt-8">All Partner Investments</h3> {/* Changed heading color and added mt-8 */}
             <div className="relative z-10 overflow-x-auto bg-app-card rounded-2xl shadow-soft-lg border border-app-border p-4">
               <table className="min-w-full divide-y divide-app-border">
                 <thead className="bg-app-border">
@@ -497,8 +692,8 @@ const App = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-app-border">
-                  {partnerMetrics.length > 0 ? (
-                    partnerMetrics.map((partner, index) => (
+                  {partnersWithMetrics.length > 0 ? (
+                    partnersWithMetrics.map((partner, index) => (
                       <tr key={partner.id} className={`hover:bg-app-border transition-colors duration-200 ${index % 2 === 0 ? 'bg-app-card' : 'bg-app-bg'}`}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-app-text-primary">{partner.name}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-app-text-primary">AUD {partner.moneyInvested?.toFixed(2)}</td>
@@ -514,7 +709,7 @@ const App = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-app-text-secondary">No partner data available. Add data in Firebase Firestore.</td>
+                      <td colSpan="6" className="px-4 py-3 text-center text-sm text-app-text-secondary">No partner data available. Add data using the form above.</td>
                     </tr>
                   )}
                 </tbody>
